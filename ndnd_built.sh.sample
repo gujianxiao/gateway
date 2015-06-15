@@ -1,0 +1,38 @@
+#!/bin/sh
+# ndnd/ndnd_built.sh.sample
+# 
+# Part of the NDNx distribution.
+#
+# Portions Copyright (C) 2013 Regents of the University of California.
+# 
+# Based on the CCNx C Library by PARC.
+# Copyright (C) 2010 Palo Alto Research Center, Inc.
+#
+# This work is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License version 2 as published by the
+# Free Software Foundation.
+# This work is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.
+#
+
+V=`date +%s`
+S=`which sh`
+test -x ./ndnd || exit 1
+mv ndnd ndnd-$V
+NDND=`pwd`/ndnd-$V
+test -x "$NDND" || exit 1
+cat > ndnd <<EOF
+#!$S
+# generated script
+case ":-\$*" in
+	:-) break;;
+	*) exec "$NDND" "\$@";;
+esac
+
+trap "ndndsmoketest kill 2>/dev/null" 0
+
+NDND_DEBUG=71 "$NDND" 2>>/dev/tty
+
+EOF
+chmod +x ndnd

@@ -1,0 +1,105 @@
+#!/bin/sh
+# ndnd/testbasics
+# 
+# Part of the NDNx distribution.
+#
+# Portions Copyright (C) 2013 Regents of the University of California.
+# 
+# Based on the CCNx C Library by PARC.
+# Copyright (C) 2009, 2011 Palo Alto Research Center, Inc.
+#
+# This work is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License version 2 as published by the
+# Free Software Foundation.
+# This work is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.
+#
+NDN_LOCAL_PORT=${NDN_LOCAL_PORT_BASE:-63000}
+export NDN_LOCAL_PORT
+: ${NDND_DEBUG:=0}
+export NDND_DEBUG
+
+Fail () {
+  echo '*** Failed' $* >&2
+  exit 1
+}
+
+Cleanup () {
+   ./ndndsmoketest kill 2>/dev/null
+   wait
+}
+
+./ndndsmoketest kill 2>/dev/null
+echo Starting ndnd with NDN_LOCAL_PORT=$NDN_LOCAL_PORT
+./ndnd &
+
+echo Making sure new ndnd is there
+./ndndsmoketest 2>/dev/null || { sleep 1; ./ndndsmoketest || Fail; }
+
+trap Cleanup 0
+
+echo Populating ndnd with pre-signed data
+./ndndsmoketest  -t 10 send fortunes.ndnb recv || Fail
+
+echo Making anything.ndnb
+../cmd/ndn_xmltondnb -w - <<'END' > anything.ndnb
+<Interest>
+  <Name>
+  </Name>
+</Interest>
+END
+
+echo Trying for anything a few times
+./ndndsmoketest -t 200 send anything.ndnb recv send anything.ndnb recv send anything.ndnb recv > anything.out || Fail
+diff anything.ref anything.out || echo Diffs above might be OK, but have a look
+MATCHES=`grep -c '^recv of' anything.out`
+test $MATCHES = 3 || Fail Wrong number of matches, got $MATCHES expected 3
+
+echo Testing contentobjecthash
+../cmd/ndn_xmltondnb -w - <<'END' > contentobjecthash.ndnb
+<Interest>
+  <Name>
+    <Component ndnbencoding="text">local</Component>
+    <Component ndnbencoding="text">test</Component>
+    <Component ndnbencoding="text">fortunes</Component>
+    <Component ndnbencoding="text">doubt</Component>
+    <Component ndnbencoding="text">0</Component>
+    <Component ndnbencoding="hexBinary">f7638fb36c69d8c6e18cadac0616801a63876949425ca19379166e91d1e70b97</Component>
+  </Name>
+</Interest>
+END
+
+./ndndsmoketest -t 300 send contentobjecthash.ndnb recv > contentobjecthash.out || Fail
+diff contentobjecthash.ref contentobjecthash.out || Fail contentobjecthash.out does not match expected
+
+echo Testing that fetch with bad hash does not succeed
+../cmd/ndn_xmltondnb -w - <<'END' > contentmishash.ndnb
+<Interest>
+  <Name>
+    <Component ndnbencoding="text">local</Component>
+    <Component ndnbencoding="text">test</Component>
+    <Component ndnbencoding="text">fortunes</Component>
+    <Component ndnbencoding="text">doubt</Component>
+    <Component ndnbencoding="text">0</Component>
+    <Component ndnbencoding="hexBinary">f7638fb36c69d8c6e18cadac0616803a63876949425ca19379166e91d1e70b97</Component>
+  </Name>
+</Interest>
+END
+./ndndsmoketest -t 200 send contentmishash.ndnb recv | grep 'recv timed out' || Fail contentmishash
+
+echo Testing MinSuffixComponents
+../cmd/ndn_xmltondnb -w - <<'END' > minsuffix.ndnb
+<Interest>
+  <Name>
+    <Component ndnbencoding="text">local</Component>
+    <Component ndnbencoding="text">test</Component>
+  </Name>
+  <MinSuffixComponents>5</MinSuffixComponents>
+</Interest>
+END
+
+./ndndsmoketest -t 300 send minsuffix.ndnb recv > minsuffix.out || Fail
+diff minsuffix.ref minsuffix.out || Fail minsuffix.out does not match expected
+
+echo $0 TESTS PASSED

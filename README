@@ -1,0 +1,55 @@
+ndnd - NDNx Daemon
+	options: none
+	arguments: none
+	environment variables:
+		NDND_DEBUG=
+			0 - no messages
+			1 - basic messages (any non-zero value gets these)
+			2 - interest messages
+			4 - content messages
+			8 - matching details
+			16 - interest details
+			32 - gory interest details
+			64 - log occasional human-readable timestamps
+			128 - face registration debugging
+			bitwise OR these together for combinations; -1 gets max logging
+		NDN_LOCAL_PORT=
+			UDP port for unicast clients (default 9695).
+			Also listens on this TCP port for stream connections.
+			Also affects name of unix-domain socket.
+		NDN_LOCAL_SOCKNAME=
+			Name stem of unix-domain socket (default /tmp/.ndnd.sock).
+		NDND_CAP=
+			Capacity limit, in count of ContentObjects.
+			Not an absolute limit.
+		NDND_MTU=
+			Packet size in bytes.
+			If set, interest stuffing is allowed within this budget.
+			Single items larger than this are not precluded.
+		NDND_DATA_PAUSE_MICROSEC=
+			Adjusts content-send delay time for multicast and udplink faces
+		NDND_DEFAULT_TIME_TO_STALE=
+			Default for content objects without explicit FreshnessSeconds
+		NDND_MAX_TIME_TO_STALE=
+			Limit, in seconds, until content becomes stale
+		NDND_KEYSTORE_DIRECTORY=
+			Directory readable only by ndnd where its keystores are kept
+			Defaults to a private subdirectory of /var/tmp
+		NDND_LISTEN_ON=
+			List of ip addresses to listen on; defaults to wildcard
+		NDND_AUTOREG=
+			List of prefixes to auto-register on new faces initiated by peers
+			example: NDND_AUTOREG=ndn:/like/this,ndn:/and/this
+
+ndndsmoketest - simple-minded program for exercising ndnd
+	options: -t millisconds - sets the timeout for recv operations
+		 -u hostname - communicate with ndnd using udp
+	arguments: ( send <filename> | recv | kill | timeo <millisconds> ) ...
+		send <filename> sends the literal contents of the file to the ndnd.
+			The file should be in ndnd format.
+		recv receives data from ndnd and dumps it to stdout.
+			Subject to timeout.
+		kill tries to get the ndnd to shut down.
+		timeo <millisconds> changes the timeout for subsequent recvs.
+	environment variables:
+		NDN_LOCAL_PORT as for ndnd

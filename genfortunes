@@ -1,0 +1,45 @@
+#!/bin/sh
+# ndnd/genfortunes
+# 
+# Part of the NDNx distribution.
+#
+# Portions Copyright (C) 2013 Regents of the University of California.
+# 
+# Based on the CCNx C Library by PARC.
+# Copyright (C) 2009 Palo Alto Research Center, Inc.
+#
+# This work is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License version 2 as published by the
+# Free Software Foundation.
+# This work is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.
+#
+# This script is useful for regenerating fortunes.ndnb when the
+# schemas have changed.  The reference versions will have to
+# be adjusted as well.
+export NDN_LOCAL_PORT=8912
+ndnd &
+ndndsmoketest
+ndnsendchunks /local/test/fortunes/trust <<EOF
+TRUST ME:
+	Translation of the Latin "caveat emptor."
+EOF
+ndnsendchunks /local/test/fortunes/doubt <<EOF
+When in doubt, follow your heart.
+EOF
+ndnsendchunks /local/test/fortunes/revenue <<EOF
+For 20 dollars, I'll give you a good fortune next time ...
+EOF
+ndnsendchunks /local/test/fortunes/success <<EOF
+If A equals success, then the formula is A = X + Y + Z.  X is work.  Y
+is play.  Z is keep your mouth shut.
+		-- Albert Einstein
+EOF
+ndnsendchunks /local/test/fortunes/not/included <<EOF
+This fortune intentionally not included.
+EOF
+
+ndnrm -o fortunes.ndnb
+ndndsmoketest kill
+wait
